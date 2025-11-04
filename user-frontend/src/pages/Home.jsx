@@ -7,22 +7,14 @@ import { toast } from "react-toastify";
 import searchIcon from "/icons/searchIcon.png";
 
 const CATEGORIES_CONFIG = [
-  {
-    id: "burger",
-    label: "Burger",
-    icon: "/icons/burgerIcon.png",
-    type: "image",
-  },
-  { id: "pizza", label: "Pizza", icon: "/icons/pizzaIcon.png", type: "image" },
-  { id: "drink", label: "Drink", icon: "/icons/drinkIcon.png" },
-  {
-    id: "french-fries",
-    label: "French fries",
-    icon: "/icons/frenchFriesIcon.png",
-  },
-  { id: "veggies", label: "Veggies", icon: "/icons/veggiesIcon.png" },
-  { id: "desserts", label: "Desserts", icon: "/icons/Icon.png" },
-  { id: "pasta", label: "Pasta", icon: "/icons/Icon.png" },
+   { id: 'burger', label: 'Burger', icon: '🍔' },
+  { id: 'pizza', label: 'Pizza', icon: '🍕' },
+  { id: 'drink', label: 'Drink', icon: '🥤' },
+  { id: 'french-fries', label: 'French fries', icon: '🍟' },
+  { id: 'veggies', label: 'Veggies', icon: '🥗' },
+  { id: 'desserts', label: 'Desserts', icon: '🍰' },
+  { id: 'pasta', label: 'Pasta', icon: '🍝' }
+
 ];
 
 const Home = () => {
