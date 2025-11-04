@@ -151,6 +151,7 @@ const Home = () => {
 
   // Handle search input
   const handleSearchChange = (e) => {
+    e.preventDefault();
     const value = e.target.value;
     setSearchTerm(value);
     // Clear category when user starts typing
