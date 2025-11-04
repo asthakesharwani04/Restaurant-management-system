@@ -302,9 +302,7 @@ const Home = () => {
             }`}
             onClick={() => handleCategorySelect(cat.label)}
           >
-            <div className="category-icon">
-              <img src={cat.icon} alt="" />
-            </div>
+            <div className="category-icon">{cat.icon}</div>
             <div className="category-label">{cat.label}</div>
           </div>
         ))}
