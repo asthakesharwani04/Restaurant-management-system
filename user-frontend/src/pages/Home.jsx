@@ -63,13 +63,14 @@ const Home = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const { data } = await axiosClient.get("/menu/categories");
+        const { data } = await axiosClient.get("/api/menu/categories");
         console.log(data);
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/menu/categories`);
-        const data1 = await res.json();
-        console.log(data1);
+        // const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/menu/categories`);
+        // const data1 = await res.json();
+        // console.log(data1);
         setCategories(data.data || []);
       } catch (error) {
+        console.error("Error fetching categories:", error);
         toast.error("Failed to load categories");
       }
     };
