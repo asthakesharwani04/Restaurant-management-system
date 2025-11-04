@@ -24,7 +24,7 @@ connectDB();
 
 //configure cors 
 const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [];
-
+console.log("Allowed Origins:", allowedOrigins);
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin || allowedOrigins.includes(origin)) {
