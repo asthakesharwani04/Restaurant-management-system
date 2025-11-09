@@ -1,6 +1,4 @@
-/* user-frontend/src/styles/index.css */
 
-/* Reset & Base Styles */
 * {
   margin: 0;
   padding: 0;
@@ -1066,12 +1064,18 @@ body {
 /* ===== THANK YOU PAGE ===== */
 .thankyou{
   background-color: #20BF6D;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .thankyou-page {
-  /* display: flex;
-  align-items: center;
-  justify-content: center; */
+  width: 100%;
+  height: 100%;
   background-color: #20BF6D;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .thankyou-content {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import axiosClient from '../api/axiosClient';
 import Loader from '../components/Loader';
 import { toast } from 'react-toastify';
@@ -16,6 +16,7 @@ const INITIAL_FORM_STATE = {
 
 const Menu = () => {
   const [menuItems, setMenuItems] = useState([]);
+  const [allMenuItems, setAllMenuItems] = useState([]); // Store all items
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,22 +24,53 @@ const Menu = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
+  // Get dynamic image URL from environment variable
+  const getImageUrl = (imagePath) => {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const cleanBaseURL = baseURL.replace('/api', '');
+    return `${cleanBaseURL}${imagePath}`;
+  };
+
+  // Fetch all menu items ONCE on component mount
   const fetchMenuItems = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await axiosClient.get(`/api/menu?search=${searchTerm}`);
-      setMenuItems(data.data || []);
+      const { data } = await axiosClient.get('/api/menu');
+      const items = data.data || [];
+      setAllMenuItems(items); // Store all items
+      setMenuItems(items); // Display all items initially
     } catch (error) {
       toast.error(error.message);
+      setAllMenuItems([]);
       setMenuItems([]);
     } finally {
       setLoading(false);
     }
-  }, [searchTerm]);
+  }, []); 
 
+  // Initial fetch on mount
   useEffect(() => {
     fetchMenuItems();
   }, [fetchMenuItems]);
+
+  // Client-side filtering 
+  const filteredMenuItems = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return allMenuItems; // Show all if search is empty
+    }
+
+    const searchLower = searchTerm.toLowerCase().trim();
+    
+    return allMenuItems.filter(item => {
+      // Search by name (case-insensitive)
+      return item.name.toLowerCase().includes(searchLower);
+    });
+  }, [searchTerm, allMenuItems]);
+
+  // Update displayed items when filter changes
+  useEffect(() => {
+    setMenuItems(filteredMenuItems);
+  }, [filteredMenuItems]);
 
   const handleImageChange = e => {
     const file = e.target.files[0];
@@ -63,24 +95,24 @@ const Menu = () => {
     try {
       const formDataToSend = new FormData();
       const numericFields = ['price', 'averagePreparationTime', 'stock'];
-       Object.keys(formData).forEach(key => {
-      let value = formData[key];
-
-      if (numericFields.includes(key)) {
-        value = Number(value);
-      }
       
-      formDataToSend.append(key, value);
-    });
+      Object.keys(formData).forEach(key => {
+        let value = formData[key];
+        if (numericFields.includes(key)) {
+          value = Number(value);
+        }
+        formDataToSend.append(key, value);
+      });
+      
       formDataToSend.append('image', selectedImage);
 
-      await axiosClient.post('/api/menu', formDataToSend, {
+      await axiosClient.post('/menu', formDataToSend, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
       toast.success('Menu item added successfully');
       resetForm();
-      fetchMenuItems();
+      fetchMenuItems(); // Refresh all items after adding
     } catch (error) {
       toast.error(error.message);
     }
@@ -105,7 +137,7 @@ const Menu = () => {
       <div className="menu-search-container">
         <input
           type="text"
-          placeholder="Search"
+          placeholder="Search..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           className="menu-search-input"
@@ -115,13 +147,17 @@ const Menu = () => {
       {/* Menu Items Grid */}
       <div className="menu-items-grid">
         {menuItems.length === 0 ? (
-          <p className="no-data">No menu items found</p>
+          <p className="no-data">
+            {searchTerm 
+              ? `No menu items found matching "${searchTerm}"`
+              : 'No menu items found'}
+          </p>
         ) : (
           menuItems.map(item => (
             <div key={item._id} className="menu-item-card">
               <div className="menu-item-image">
                 <img 
-                  src={`https://restaurant-management-system-e54e.onrender.com${item.image}`} 
+                  src={getImageUrl(item.image)}
                   alt={item.name}
                   onError={e => e.target.src = 'https://via.placeholder.com/300x200?text=No+Image'}
                 />

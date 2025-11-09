@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../api/axiosClient";
 import CategoryList from "../components/CategoryList.jsx";
@@ -7,14 +7,13 @@ import { toast } from "react-toastify";
 import searchIcon from "/icons/searchIcon.png";
 
 const CATEGORIES_CONFIG = [
-   { id: 'burger', label: 'Burger', icon: '🍔' },
-  { id: 'pizza', label: 'Pizza', icon: '🍕' },
-  { id: 'drink', label: 'Drink', icon: '🥤' },
-  { id: 'french-fries', label: 'French fries', icon: '🍟' },
-  { id: 'veggies', label: 'Veggies', icon: '🥗' },
-  { id: 'desserts', label: 'Desserts', icon: '🍰' },
-  { id: 'pasta', label: 'Pasta', icon: '🍝' }
-
+  { id: "burger", label: "Burger", icon: "🍔" },
+  { id: "pizza", label: "Pizza", icon: "🍕" },
+  { id: "drink", label: "Drink", icon: "🥤" },
+  { id: "french-fries", label: "French fries", icon: "🍟" },
+  { id: "veggies", label: "Veggies", icon: "🥗" },
+  { id: "desserts", label: "Desserts", icon: "🍰" },
+  { id: "pasta", label: "Pasta", icon: "🍝" },
 ];
 
 const Home = () => {
@@ -42,9 +41,7 @@ const Home = () => {
   // Load cart and user details from localStorage
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
-    if (savedCart) {
-      setCart(JSON.parse(savedCart));
-    }
+    if (savedCart) setCart(JSON.parse(savedCart));
 
     const savedUserDetails = localStorage.getItem("userDetails");
     if (savedUserDetails) {
@@ -64,10 +61,6 @@ const Home = () => {
     const fetchCategories = async () => {
       try {
         const { data } = await axiosClient.get("/api/menu/categories");
-        console.log(data);
-        // const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/menu/categories`);
-        // const data1 = await res.json();
-        // console.log(data1);
         setCategories(data.data || []);
       } catch (error) {
         console.error("Error fetching categories:", error);
@@ -77,48 +70,45 @@ const Home = () => {
     fetchCategories();
   }, []);
 
-  // Fetch menu items with infinite scroll - MEMOIZED with useCallback
-  const fetchMenuItems = useCallback(
-    async (pageNum = 1, category = null, search = "") => {
-      try {
-        if (pageNum === 1) {
-          setLoading(true);
-        } else {
-          setLoadingMore(true);
-        }
-
-        const params = { page: pageNum, limit: 20 };
-        if (category) params.category = category;
-        if (search) params.search = search;
-
-        const { data } = await axiosClient.get("/api/menu", { params });
-
-        if (pageNum === 1) {
-          setMenuItems(data.data || []);
-        } else {
-          setMenuItems((prev) => [...prev, ...(data.data || [])]);
-        }
-
-        setHasMore(data.pagination?.page < data.pagination?.pages);
-      } catch (error) {
-        console.error("Error fetching menu items:", error);
-        toast.error("Failed to load menu items");
-        setMenuItems([]);
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
+  // Fetch menu items (without search filtering)
+  const fetchMenuItems = useCallback(async (pageNum = 1, category = null) => {
+    try {
+      if (pageNum === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
       }
-    },
-    []
-  );
 
+      const params = { page: pageNum, limit: 20 };
+      if (category) params.category = category;
+
+      const { data } = await axiosClient.get("/api/menu", { params });
+
+      if (pageNum === 1) {
+        setMenuItems(data.data || []);
+      } else {
+        setMenuItems((prev) => [...prev, ...(data.data || [])]);
+      }
+
+      setHasMore(data.pagination?.page < data.pagination?.pages);
+    } catch (error) {
+      console.error("Error fetching menu items:", error);
+      toast.error("Failed to load menu items");
+      setMenuItems([]);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  // Refetch items when category changes
   useEffect(() => {
     setPage(1);
     setMenuItems([]);
-    fetchMenuItems(1, selectedCategory, searchTerm);
-  }, [selectedCategory, searchTerm, fetchMenuItems]);
+    fetchMenuItems(1, selectedCategory);
+  }, [selectedCategory, fetchMenuItems]);
 
-  // Infinite scroll - last element observer
+  // Infinite scroll - observer
   const lastMenuItemRef = useCallback(
     (node) => {
       if (loadingMore) return;
@@ -135,19 +125,18 @@ const Home = () => {
     [loadingMore, hasMore]
   );
 
-  // Load more items when page changes
+  // Load more on page change
   useEffect(() => {
     if (page > 1) {
-      fetchMenuItems(page, selectedCategory, searchTerm);
+      fetchMenuItems(page, selectedCategory);
     }
-  }, [page, fetchMenuItems, selectedCategory, searchTerm]);
+  }, [page, fetchMenuItems, selectedCategory]);
 
   // Handle search input
   const handleSearchChange = (e) => {
     e.preventDefault();
     const value = e.target.value;
     setSearchTerm(value);
-    // Clear category when user starts typing
     if (value && selectedCategory) {
       setSelectedCategory(null);
     }
@@ -155,35 +144,28 @@ const Home = () => {
 
   // Handle category selection
   const handleCategorySelect = (category) => {
-    // Clear search when category is selected
     setSearchTerm("");
     setSelectedCategory(selectedCategory === category ? null : category);
   };
 
-  // Check if user exists by phone number
+  // Check user by phone
   const checkUserByPhone = async (phone) => {
     if (phone.length !== 10) return;
-
     try {
       const { data } = await axiosClient.get(`/api/users/phone/${phone}`);
       if (data.success) {
-        setUserDetails({
-          ...data.data,
-          numberOfPersons: "2",
-        });
+        setUserDetails({ ...data.data, numberOfPersons: "2" });
         setIsEditingPhone(false);
         toast.success("Welcome back!");
       }
-    } catch (error) {
+    } catch {
       setIsEditingPhone(false);
     }
   };
 
-  // Handle phone input
   const handlePhoneChange = (e) => {
     const phone = e.target.value.replace(/\D/g, "").slice(0, 10);
     setUserDetails({ ...userDetails, phone });
-
     if (phone.length === 10) {
       checkUserByPhone(phone);
     }
@@ -220,7 +202,6 @@ const Home = () => {
     }
 
     const existingItem = cart.find((cartItem) => cartItem._id === item._id);
-
     if (existingItem) {
       if (existingItem.quantity >= item.stock) {
         toast.warning("Cannot add more, stock limit reached");
@@ -240,7 +221,7 @@ const Home = () => {
     }
   };
 
-  // Go to checkout
+  // Navigate to checkout
   const handleNext = () => {
     if (!userDetails.name || !userDetails.phone || !userDetails.address) {
       setShowDetailsModal(true);
@@ -253,11 +234,23 @@ const Home = () => {
       return;
     }
 
-    console.log("Navigating to checkout with cart:", cart);
     navigate("/checkout", { state: { userDetails, cartData: cart } });
   };
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  // ✅ Client-side filtered items
+  const filteredMenuItems = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return menuItems;
+    }
+
+    const searchLower = searchTerm.toLowerCase().trim();
+
+    return menuItems.filter((item) =>
+      item.name.toLowerCase().includes(searchLower)
+    );
+  }, [searchTerm, menuItems]);
 
   if (loading && page === 1) {
     return (
@@ -273,7 +266,7 @@ const Home = () => {
       {/* Header */}
       <div className="app-header-new">
         <div className="greeting">Good evening</div>
-        <div className="subtitle">Place you order here</div>
+        <div className="subtitle">Place your order here</div>
       </div>
 
       {/* Search Bar */}
@@ -308,12 +301,11 @@ const Home = () => {
         ))}
       </div>
 
-      {/* Current Category Title */}
       {selectedCategory && (
         <div className="current-category-title">{selectedCategory}</div>
       )}
 
-      {/* User Details Modal/Card */}
+      {/* User Details Modal */}
       {showDetailsModal && (
         <div
           className="details-modal-overlay"
@@ -388,14 +380,14 @@ const Home = () => {
         </div>
       )}
 
-      {/* Menu Items Grid */}
+      {/* Menu Items */}
       <div className="menu-items-container">
-        {menuItems.length === 0 ? (
+        {filteredMenuItems.length === 0 ? (
           <p className="no-items-msg">No items available</p>
         ) : (
           <div className="menu-items-grid-new">
-            {menuItems.map((item, index) => {
-              if (menuItems.length === index + 1) {
+            {filteredMenuItems.map((item, index) => {
+              if (filteredMenuItems.length === index + 1) {
                 return (
                   <div key={item._id} ref={lastMenuItemRef}>
                     <MenuItem item={item} onAddToCart={handleAddToCart} />
